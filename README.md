@@ -111,3 +111,39 @@ API-ul va furniza documentație OpenAPI generată automat de FastAPI. Endpointur
 ## Stare curentă
 
 Proiectul este în faza inițială de implementare. Elementele din secțiunile de funcționalități, arhitectură și API reprezintă direcția țintă și vor fi actualizate pe măsură ce componentele devin funcționale.
+
+## Rulare locală
+
+### Cerințe
+
+- Python 3.13 sau mai nou;
+- `pip`.
+
+### Instalare
+
+Din directorul proiectului, creează și activează un mediu virtual, apoi instalează proiectul cu dependențele de dezvoltare:
+
+```powershell
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+python -m pip install --upgrade pip
+python -m pip install -e ".[dev]"
+```
+
+### Pornirea API-ului
+
+```powershell
+uvicorn app.main:app --reload
+```
+
+API-ul va fi disponibil la `http://127.0.0.1:8000`.
+
+- health check: `GET http://127.0.0.1:8000/health` răspunde cu `{"status":"ok"}`;
+- documentație OpenAPI interactivă: `http://127.0.0.1:8000/docs`;
+- schemă OpenAPI: `http://127.0.0.1:8000/openapi.json`.
+
+### Teste
+
+```powershell
+pytest
+```
