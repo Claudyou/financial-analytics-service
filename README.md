@@ -101,7 +101,7 @@ API-ul va furniza documentație OpenAPI generată automat de FastAPI. Endpointur
 ## Roadmap
 
 - [ ] API FastAPI, health check, tranzacții și categorii;
-- [ ] import CSV sincron, validare și teste;
+- [x] import CSV sincron, validare și teste;
 - [ ] PostgreSQL, migration-uri, autentificare și rapoarte;
 - [ ] reguli de categorisire, bugete și Docker Compose;
 - [ ] import asincron prin Redis și worker-e;
@@ -141,6 +141,36 @@ API-ul va fi disponibil la `http://127.0.0.1:8000`.
 - health check: `GET http://127.0.0.1:8000/health` răspunde cu `{"status":"ok"}`;
 - documentație OpenAPI interactivă: `http://127.0.0.1:8000/docs`;
 - schemă OpenAPI: `http://127.0.0.1:8000/openapi.json`.
+
+### Import CSV sincron
+
+Endpointul `POST /imports` primește un fișier CSV cu tranzacții, îl validează, elimină duplicatele și întoarce statisticile importului.
+
+Formatul CSV așteptat:
+
+```csv
+transaction_date,amount,currency,description,account_id
+2026-09-01,-45.50,RON,LIDL,account_1
+2026-09-02,5000.00,RON,Salary,account_1
+```
+
+Exemplu de apel:
+
+```powershell
+curl.exe -F "file=@transactions.csv;type=text/csv" http://127.0.0.1:8000/imports
+```
+
+Răspuns reușit — `201 Created`:
+
+```json
+{
+  "created": 2,
+  "duplicates_skipped": 0,
+  "invalid_rows": 0
+}
+```
+
+Erori posibile: `400 file_missing` (fișier absent sau gol), `415 unsupported_media_type` (tip de conținut neacceptat), `413 file_too_large` (peste limita configurată) și `422 invalid_csv_columns` (lipsesc coloane obligatorii).
 
 ### Teste
 
