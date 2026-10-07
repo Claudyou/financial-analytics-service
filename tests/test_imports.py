@@ -1,4 +1,6 @@
 import io
+from datetime import date
+from decimal import Decimal
 
 import pytest
 from fastapi.testclient import TestClient
@@ -16,9 +18,13 @@ VALID_CSV = (
 
 
 @pytest.fixture
-def client() -> TestClient:
+def repository() -> TransactionRepository:
+    return TransactionRepository()
+
+
+@pytest.fixture
+def client(repository: TransactionRepository) -> TestClient:
     """A client whose import service uses a fresh in-memory repository."""
-    repository = TransactionRepository()
     app.dependency_overrides[get_import_service] = lambda: ImportService(repository)
     yield TestClient(app)
     app.dependency_overrides.clear()
@@ -28,7 +34,9 @@ def _upload(content: str) -> dict:
     return {"file": ("transactions.csv", io.BytesIO(content.encode()), "text/csv")}
 
 
-def test_valid_csv_creates_transactions(client: TestClient) -> None:
+def test_valid_csv_creates_transactions(
+    client: TestClient, repository: TransactionRepository
+) -> None:
     response = client.post("/imports", files=_upload(VALID_CSV))
 
     assert response.status_code == 201
@@ -37,6 +45,16 @@ def test_valid_csv_creates_transactions(client: TestClient) -> None:
         "duplicates_skipped": 0,
         "invalid_rows": 0,
     }
+    assert repository.exists(
+        repository.deduplication_key(
+            "account_1", date(2026, 9, 1), Decimal("-45.50"), "lidl"
+        )
+    )
+    assert repository.exists(
+        repository.deduplication_key(
+            "account_1", date(2026, 9, 2), Decimal("5000.00"), "salary"
+        )
+    )
 
 
 def test_missing_required_column_returns_422(client: TestClient) -> None:
@@ -82,6 +100,22 @@ def test_invalid_rows_are_counted_and_skipped(client: TestClient) -> None:
         "created": 1,
         "duplicates_skipped": 0,
         "invalid_rows": 2,
+    }
+
+
+def test_non_numeric_amount_is_counted_as_invalid(client: TestClient) -> None:
+    csv_with_invalid_amount = (
+        "transaction_date,amount,currency,description,account_id\n"
+        "2026-09-01,abc,RON,LIDL,account_1\n"
+    )
+
+    response = client.post("/imports", files=_upload(csv_with_invalid_amount))
+
+    assert response.status_code == 201
+    assert response.json() == {
+        "created": 0,
+        "duplicates_skipped": 0,
+        "invalid_rows": 1,
     }
 
 
